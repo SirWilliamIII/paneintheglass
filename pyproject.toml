@@ -1,0 +1,33 @@
+[project]
+name = "paneintheglass"
+version = "0.1.0"
+description = "Stained Glass Portfolio Website"
+authors = [
+    {name = "Artist", email = "artist@paneintheglass.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "flask>=2.3.3",
+    "flask-sqlalchemy>=3.0.5",
+    "flask-migrate>=4.0.5",
+    "pillow>=10.0.0",
+    "python-dotenv>=1.0.0",
+    "gunicorn>=21.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']

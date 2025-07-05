@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pane in the Glass - Artisan Stained Glass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        glass: {
+                            50: '#f0fdf4', 100: '#dcfce7', 200: '#bbf7d0', 300: '#86efac',
+                            400: '#4ade80', 500: '#22c55e', 600: '#16a34a', 700: '#15803d',
+                            800: '#166534', 900: '#14532d'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-pattern {
+            background: linear-gradient(45deg, rgba(34, 197, 94, 0.1) 25%, transparent 25%), 
+                        linear-gradient(-45deg, rgba(34, 197, 94, 0.1) 25%, transparent 25%), 
+                        linear-gradient(45deg, transparent 75%, rgba(34, 197, 94, 0.1) 75%), 
+                        linear-gradient(-45deg, transparent 75%, rgba(34, 197, 94, 0.1) 75%);
+            background-size: 20px 20px;
+        }
+        .glass-shimmer {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%);
+            background-size: 200% 200%;
+            animation: shimmer 3s ease-in-out infinite;
+        }
+        @keyframes shimmer {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        .image-hover {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .image-hover:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(34, 197, 94, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 glass-shimmer rounded-full"></div>
+                    <h1 class="text-2xl font-bold text-glass-800">Pane in the Glass</h1>
+                </div>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#home" class="text-gray-700 hover:text-glass-600 transition-colors">Home</a>
+                    <a href="#portfolio" class="text-gray-700 hover:text-glass-600 transition-colors">Portfolio</a>
+                    <a href="#about" class="text-gray-700 hover:text-glass-600 transition-colors">About</a>
+                    <a href="#contact" class="text-gray-700 hover:text-glass-600 transition-colors">Contact</a>
+                    <button onclick="showAdminLogin()" class="text-glass-600 hover:text-glass-800 transition-colors">Admin</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="glass-pattern py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-5xl md:text-6xl font-bold text-gray-800 mb-6">
+                Artisan <span class="text-glass-600">Stained Glass</span>
+            </h2>
+            <p class="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+                Handcrafted stained glass art that transforms light into poetry. 
+                Each piece tells a story through color, texture, and the dance of illumination.
+            </p>
+            <button onclick="scrollToPortfolio()" class="bg-glass-600 text-white px-8 py-4 rounded-full text-lg font-semibold hover:bg-glass-700 transition-colors shadow-lg">
+                View Portfolio
+            </button>
+        </div>
+    </section>
+
+    <!-- Portfolio Section -->
+    <section id="portfolio" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-4xl font-bold text-center text-gray-800 mb-12">Featured Works</h2>
+            
+            <div id="portfolio-loading" class="text-center py-20">
+                <div class="glass-shimmer w-12 h-12 rounded-full mx-auto mb-4"></div>
+                <p class="text-glass-600">Loading portfolio...</p>
+            </div>
+            
+            <div id="portfolio-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 hidden"></div>
+            
+            <div id="portfolio-empty" class="text-center py-20 hidden">
+                <p class="text-gray-600 text-lg">No portfolio items available yet.</p>
+                <p class="text-gray-500">Click "Admin" to upload your first image!</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-20 bg-gray-100">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-12">
+                <h2 class="text-4xl font-bold text-gray-800 mb-6">About the Artist</h2>
+                <div class="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-glass-400 to-glass-600 mb-6"></div>
+                <p class="text-lg text-gray-700 leading-relaxed">
+                    With over two decades of experience in the ancient art of stained glass, 
+                    I create pieces that celebrate both traditional techniques and contemporary vision. 
+                    Each window, panel, and sculpture is meticulously crafted to capture and transform 
+                    natural light into something magical.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-20 bg-white">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h2 class="text-4xl font-bold text-gray-800 mb-8">Get in Touch</h2>
+            <p class="text-lg text-gray-600 mb-8">
+                Ready to commission a custom piece or have questions about my work?
+            </p>
+            <div class="flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-8">
+                <a href="mailto:artist@paneintheglass.com" 
+                   class="bg-glass-600 text-white px-6 py-3 rounded-full hover:bg-glass-700 transition-colors">
+                    Email Me
+                </a>
+                <a href="tel:+1234567890" 
+                   class="border-2 border-glass-600 text-glass-600 px-6 py-3 rounded-full hover:bg-glass-600 hover:text-white transition-colors">
+                    Call Now
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Admin Login Modal -->
+    <div id="admin-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4">
+            <h3 class="text-2xl font-bold text-gray-800 mb-6">Admin Access</h3>
+            <div id="login-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
+            <form id="admin-form" onsubmit="handleAdminLogin(event)">
+                <input type="password" id="admin-password" placeholder="Enter admin password"
+                       class="w-full p-4 border-2 border-gray-300 rounded-lg mb-4 focus:border-glass-500 focus:outline-none">
+                <div class="flex space-x-4">
+                    <button type="submit" id="login-btn"
+                            class="flex-1 bg-glass-600 text-white py-3 rounded-lg hover:bg-glass-700 transition-colors">
+                        Login
+                    </button>
+                    <button type="button" onclick="hideAdminLogin()"
+                            class="flex-1 border-2 border-gray-300 text-gray-700 py-3 rounded-lg hover:bg-gray-100 transition-colors">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="admin-panel" class="fixed inset-0 bg-white hidden z-50 overflow-y-auto">
+        <div class="min-h-screen bg-gray-100">
+            <div class="bg-white shadow-sm">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between items-center h-16">
+                        <h1 class="text-xl font-semibold text-gray-800">Portfolio Admin</h1>
+                        <button onclick="hideAdminPanel()" 
+                                class="text-gray-600 hover:text-gray-800 transition-colors">
+                            ✕ Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="max-w-4xl mx-auto p-8">
+                <div class="bg-white rounded-xl shadow-lg p-8 mb-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Upload New Image</h2>
+                    <div id="upload-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
+                    <div id="upload-success" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4"></div>
+                    
+                    <form id="upload-form" onsubmit="handleImageUpload(event)">
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Image File</label>
+                            <input type="file" id="image-file" accept="image/*" required
+                                   class="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-glass-500 transition-colors">
+                            <p class="text-sm text-gray-500 mt-1">Maximum file size: 16MB</p>
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                            <input type="text" id="image-title" required
+                                   class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-glass-500 focus:outline-none">
+                        </div>
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                            <textarea id="image-description" rows="3"
+                                      class="w-full p-3 border-2 border-gray-300 rounded-lg focus:border-glass-500 focus:outline-none"></textarea>
+                        </div>
+                        <div class="mb-6">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="is-featured" class="mr-2">
+                                <span class="text-sm font-medium text-gray-700">Featured image</span>
+                            </label>
+                        </div>
+                        <button type="submit" id="upload-btn"
+                                class="bg-glass-600 text-white px-6 py-3 rounded-lg hover:bg-glass-700 transition-colors">
+                            Upload Image
+                        </button>
+                    </form>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-8">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Current Portfolio</h2>
+                    <div id="admin-loading" class="text-center py-10">
+                        <div class="glass-shimmer w-8 h-8 rounded-full mx-auto mb-2"></div>
+                        <p class="text-glass-600">Loading images...</p>
+                    </div>
+                    <div id="admin-portfolio-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let portfolioImages = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPortfolio();
+        });
+
+        async function apiCall(url, options = {}) {
+            const response = await fetch(url, {
+                headers: { 'Content-Type': 'application/json', ...options.headers },
+                ...options
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        }
+
+        async function loadPortfolio() {
+            const loading = document.getElementById('portfolio-loading');
+            const grid = document.getElementById('portfolio-grid');
+            const empty = document.getElementById('portfolio-empty');
+            
+            try {
+                const images = await apiCall('/api/portfolio');
+                portfolioImages = images;
+                
+                loading.classList.add('hidden');
+                
+                if (images.length === 0) {
+                    empty.classList.remove('hidden');
+                } else {
+                    grid.classList.remove('hidden');
+                    renderPortfolioGrid(images, grid);
+                }
+            } catch (error) {
+                loading.classList.add('hidden');
+                empty.classList.remove('hidden');
+            }
+        }
+
+        function renderPortfolioGrid(images, container) {
+            container.innerHTML = images.map(image => `
+                <div class="image-hover bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="h-64 overflow-hidden">
+                        <img src="${image.thumbnail_url}" alt="${image.title}" 
+                             class="w-full h-full object-cover" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjQwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPkltYWdlPC90ZXh0Pjwvc3ZnPg=='">
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">${image.title}</h3>
+                        <p class="text-gray-600">${image.description || 'Beautiful stained glass artwork.'}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showAdminLogin() {
+            document.getElementById('admin-modal').classList.remove('hidden');
+            document.getElementById('admin-password').focus();
+        }
+
+        function hideAdminLogin() {
+            document.getElementById('admin-modal').classList.add('hidden');
+            document.getElementById('admin-password').value = '';
+            document.getElementById('login-error').classList.add('hidden');
+        }
+
+        async function handleAdminLogin(event) {
+            event.preventDefault();
+            const password = document.getElementById('admin-password').value;
+            const loginBtn = document.getElementById('login-btn');
+            const errorDiv = document.getElementById('login-error');
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+            errorDiv.classList.add('hidden');
+            
+            try {
+                const result = await apiCall('/api/admin/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ password: password })
+                });
+                
+                if (result.success) {
+                    hideAdminLogin();
+                    showAdminPanel();
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Login failed';
+                errorDiv.classList.remove('hidden');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+            }
+        }
+
+        function showAdminPanel() {
+            document.getElementById('admin-panel').classList.remove('hidden');
+            loadAdminPortfolio();
+        }
+
+        function hideAdminPanel() {
+            document.getElementById('admin-panel').classList.add('hidden');
+        }
+
+        async function loadAdminPortfolio() {
+            const loading = document.getElementById('admin-loading');
+            const grid = document.getElementById('admin-portfolio-grid');
+            
+            try {
+                const images = await apiCall('/api/admin/images');
+                loading.classList.add('hidden');
+                grid.classList.remove('hidden');
+                
+                grid.innerHTML = images.map(image => `
+                    <div class="bg-gray-100 rounded-lg p-4">
+                        <div class="h-40 overflow-hidden rounded-lg mb-3">
+                            <img src="${image.thumbnail_url}" alt="${image.title}" 
+                                 class="w-full h-full object-cover">
+                        </div>
+                        <h3 class="font-semibold text-gray-800 mb-1">${image.title}</h3>
+                        <p class="text-sm text-gray-600 mb-2">${image.description || 'No description'}</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs ${image.is_featured ? 'text-glass-600' : 'text-gray-400'}">
+                                ${image.is_featured ? '⭐ Featured' : 'Not featured'}
+                            </span>
+                            <button onclick="deleteImage(${image.id})" 
+                                    class="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Failed to load admin portfolio:', error);
+            }
+        }
+
+        async function handleImageUpload(event) {
+            event.preventDefault();
+            const form = document.getElementById('upload-form');
+            const uploadBtn = document.getElementById('upload-btn');
+            const errorDiv = document.getElementById('upload-error');
+            const successDiv = document.getElementById('upload-success');
+            
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+            
+            try {
+                const formData = new FormData();
+                formData.append('image', document.getElementById('image-file').files[0]);
+                formData.append('title', document.getElementById('image-title').value);
+                formData.append('description', document.getElementById('image-description').value);
+                formData.append('is_featured', document.getElementById('is-featured').checked);
+                
+                const response = await fetch('/api/admin/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    successDiv.textContent = result.message;
+                    successDiv.classList.remove('hidden');
+                    form.reset();
+                    loadAdminPortfolio();
+                    loadPortfolio();
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                errorDiv.textContent = error.message || 'Upload failed';
+                errorDiv.classList.remove('hidden');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload Image';
+            }
+        }
+
+        async function deleteImage(imageId) {
+            if (!confirm('Are you sure you want to delete this image?')) return;
+            
+            try {
+                await apiCall(`/api/admin/images/${imageId}`, { method: 'DELETE' });
+                loadAdminPortfolio();
+                loadPortfolio();
+            } catch (error) {
+                alert('Failed to delete image: ' + error.message);
+            }
+        }
+
+        function scrollToPortfolio() {
+            document.getElementById('portfolio').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) target.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+    </script>
+</body>
+</html>
