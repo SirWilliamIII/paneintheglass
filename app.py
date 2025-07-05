@@ -27,7 +27,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 # Admin password
-ADMIN_PASSWORD_HASH = generate_password_hash('glassart2024')
+ADMIN_PASSWORD_HASH = generate_password_hash('kimsuan')
 
 # Initialize extensions
 db = SQLAlchemy(app)
@@ -246,4 +246,4 @@ with app.app_context():
     ensure_upload_directories()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5555)
+    app.run(debug=True, host='0.0.0.0', port=5000)
