@@ -1,14 +1,17 @@
 import os
 import uuid
+import io
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from werkzeug.security import check_password_hash, generate_password_hash
-from flask import Flask, request, jsonify, render_template, send_from_directory, session
+from flask import Flask, request, jsonify, render_template, send_from_directory, session, redirect
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from PIL import Image
 import secrets
 from dotenv import load_dotenv
+import boto3
+from botocore.exceptions import ClientError
 
 # Load environment variables
 load_dotenv()
@@ -17,17 +20,41 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 
-# Database configuration - Use simple current directory path
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///portfolio.db'
+# Database configuration
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    # Heroku provides DATABASE_URL, but we need to handle the postgres:// prefix
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Local development fallback
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///portfolio.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # File upload configuration
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
+# AWS S3 configuration
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
+S3_BUCKET = os.environ.get('S3_BUCKET')
+
+# Initialize S3 client
+s3_client = None
+if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and S3_BUCKET:
+    s3_client = boto3.client(
+        's3',
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        region_name=AWS_REGION
+    )
+
 # Admin password
-ADMIN_PASSWORD_HASH = generate_password_hash('kimsuan')
+admin_password = os.environ.get('ADMIN_PASSWORD', 'kimsuan')
+ADMIN_PASSWORD_HASH = generate_password_hash(admin_password)
 
 # Initialize extensions
 db = SQLAlchemy(app)
@@ -62,8 +89,8 @@ class PortfolioImage(db.Model):
             'created_at': self.created_at.isoformat(),
             'is_featured': self.is_featured,
             'display_order': self.display_order,
-            'image_url': f'/uploads/{self.filename}',
-            'thumbnail_url': f'/uploads/thumbnails/{self.filename}'
+            'image_url': f'https://{S3_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{self.filename}' if S3_BUCKET else f'/uploads/{self.filename}',
+            'thumbnail_url': f'https://{S3_BUCKET}.s3.{AWS_REGION}.amazonaws.com/thumbnails/{self.filename}' if S3_BUCKET else f'/uploads/thumbnails/{self.filename}'
         }
 
 # Utility Functions
@@ -95,11 +122,71 @@ def create_thumbnail(image_path, thumbnail_path, size=(400, 400)):
         print(f"Error creating thumbnail: {e}")
         return False
 
+def upload_to_s3(file_obj, filename, content_type='image/jpeg'):
+    """Upload file to S3 bucket"""
+    if not s3_client:
+        return False
+    
+    try:
+        s3_client.upload_fileobj(
+            file_obj,
+            S3_BUCKET,
+            filename,
+            ExtraArgs={'ContentType': content_type}
+        )
+        return True
+    except ClientError as e:
+        print(f"Error uploading to S3: {e}")
+        return False
+
+def delete_from_s3(filename):
+    """Delete file from S3 bucket"""
+    if not s3_client:
+        return False
+    
+    try:
+        s3_client.delete_object(Bucket=S3_BUCKET, Key=filename)
+        return True
+    except ClientError as e:
+        print(f"Error deleting from S3: {e}")
+        return False
+
+def create_thumbnail_s3(image_data, filename, size=(400, 400)):
+    """Create thumbnail and upload to S3"""
+    try:
+        with Image.open(io.BytesIO(image_data)) as img:
+            if img.mode in ('RGBA', 'LA', 'P'):
+                background = Image.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                img = background
+            
+            img.thumbnail(size, Image.Resampling.LANCZOS)
+            thumb = Image.new('RGB', size, (255, 255, 255))
+            thumb_w, thumb_h = img.size
+            offset = ((size[0] - thumb_w) // 2, (size[1] - thumb_h) // 2)
+            thumb.paste(img, offset)
+            
+            # Save thumbnail to bytes
+            thumb_buffer = io.BytesIO()
+            thumb.save(thumb_buffer, 'JPEG', quality=85)
+            thumb_buffer.seek(0)
+            
+            # Upload thumbnail to S3
+            thumbnail_filename = f"thumbnails/{filename}"
+            return upload_to_s3(thumb_buffer, thumbnail_filename, 'image/jpeg')
+    except Exception as e:
+        print(f"Error creating thumbnail: {e}")
+        return False
+
 def ensure_upload_directories():
-    upload_dir = app.config['UPLOAD_FOLDER']
-    thumbnail_dir = os.path.join(upload_dir, 'thumbnails')
-    os.makedirs(upload_dir, exist_ok=True)
-    os.makedirs(thumbnail_dir, exist_ok=True)
+    """Create local directories for fallback (development mode)"""
+    if not S3_BUCKET:
+        upload_dir = 'static/uploads'
+        thumbnail_dir = os.path.join(upload_dir, 'thumbnails')
+        os.makedirs(upload_dir, exist_ok=True)
+        os.makedirs(thumbnail_dir, exist_ok=True)
 
 # Routes
 @app.route('/')
@@ -154,19 +241,35 @@ def upload_image():
         original_filename = secure_filename(file.filename)
         unique_filename = generate_unique_filename(original_filename)
         
-        image_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-        file.save(image_path)
+        # Read file data
+        file_data = file.read()
+        file_size = len(file_data)
         
         try:
-            with Image.open(image_path) as img:
+            with Image.open(io.BytesIO(file_data)) as img:
                 width, height = img.size
-            file_size = os.path.getsize(image_path)
         except Exception as e:
-            os.remove(image_path)
             return jsonify({'error': f'Invalid image file: {str(e)}'}), 400
         
-        thumbnail_path = os.path.join(app.config['UPLOAD_FOLDER'], 'thumbnails', unique_filename)
-        create_thumbnail(image_path, thumbnail_path)
+        # Upload to S3 or save locally
+        if S3_BUCKET and s3_client:
+            # Upload original image to S3
+            file_obj = io.BytesIO(file_data)
+            content_type = f"image/{unique_filename.split('.')[-1].lower()}"
+            if not upload_to_s3(file_obj, unique_filename, content_type):
+                return jsonify({'error': 'Failed to upload image to S3'}), 500
+            
+            # Create and upload thumbnail
+            if not create_thumbnail_s3(file_data, unique_filename):
+                return jsonify({'error': 'Failed to create thumbnail'}), 500
+        else:
+            # Fallback to local storage
+            image_path = os.path.join('static/uploads', unique_filename)
+            with open(image_path, 'wb') as f:
+                f.write(file_data)
+            
+            thumbnail_path = os.path.join('static/uploads', 'thumbnails', unique_filename)
+            create_thumbnail(image_path, thumbnail_path)
         
         portfolio_image = PortfolioImage(
             title=title,
@@ -189,10 +292,17 @@ def upload_image():
             })
         except Exception as e:
             db.session.rollback()
-            if os.path.exists(image_path):
-                os.remove(image_path)
-            if os.path.exists(thumbnail_path):
-                os.remove(thumbnail_path)
+            # Clean up uploaded files on error
+            if S3_BUCKET and s3_client:
+                delete_from_s3(unique_filename)
+                delete_from_s3(f"thumbnails/{unique_filename}")
+            else:
+                image_path = os.path.join('static/uploads', unique_filename)
+                thumbnail_path = os.path.join('static/uploads', 'thumbnails', unique_filename)
+                if os.path.exists(image_path):
+                    os.remove(image_path)
+                if os.path.exists(thumbnail_path):
+                    os.remove(thumbnail_path)
             return jsonify({'error': f'Database error: {str(e)}'}), 500
     
     return jsonify({'error': 'Invalid file type'}), 400
@@ -208,13 +318,19 @@ def get_admin_images():
 def delete_image(image_id):
     image = PortfolioImage.query.get_or_404(image_id)
     
-    image_path = os.path.join(app.config['UPLOAD_FOLDER'], image.filename)
-    thumbnail_path = os.path.join(app.config['UPLOAD_FOLDER'], 'thumbnails', image.filename)
-    
-    if os.path.exists(image_path):
-        os.remove(image_path)
-    if os.path.exists(thumbnail_path):
-        os.remove(thumbnail_path)
+    # Delete from S3 or local storage
+    if S3_BUCKET and s3_client:
+        delete_from_s3(image.filename)
+        delete_from_s3(f"thumbnails/{image.filename}")
+    else:
+        # Fallback to local file deletion
+        image_path = os.path.join('static/uploads', image.filename)
+        thumbnail_path = os.path.join('static/uploads', 'thumbnails', image.filename)
+        
+        if os.path.exists(image_path):
+            os.remove(image_path)
+        if os.path.exists(thumbnail_path):
+            os.remove(thumbnail_path)
     
     db.session.delete(image)
     db.session.commit()
@@ -223,12 +339,24 @@ def delete_image(image_id):
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    if S3_BUCKET:
+        # Redirect to S3 URL
+        s3_url = f"https://{S3_BUCKET}.s3.{AWS_REGION}.amazonaws.com/{filename}"
+        return redirect(s3_url)
+    else:
+        # Fallback to local file serving
+        return send_from_directory('static/uploads', filename)
 
 @app.route('/uploads/thumbnails/<filename>')
 def uploaded_thumbnail(filename):
-    thumbnail_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'thumbnails')
-    return send_from_directory(thumbnail_dir, filename)
+    if S3_BUCKET:
+        # Redirect to S3 URL
+        s3_url = f"https://{S3_BUCKET}.s3.{AWS_REGION}.amazonaws.com/thumbnails/{filename}"
+        return redirect(s3_url)
+    else:
+        # Fallback to local file serving
+        thumbnail_dir = os.path.join('static/uploads', 'thumbnails')
+        return send_from_directory(thumbnail_dir, filename)
 
 # Error handlers
 @app.errorhandler(404)
@@ -246,4 +374,6 @@ with app.app_context():
     ensure_upload_directories()
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('DEBUG', 'False').lower() == 'true'
+    app.run(debug=debug, host='0.0.0.0', port=port)
